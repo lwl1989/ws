@@ -23,9 +23,9 @@ type RedisMessage struct {
 }
 
 //impl Stock interface with redis
-func (rs *RedisMessage) GetMessage() (bs []byte,len int64, err error)  {
-    sm := rs.getMessage()
-    cmd := rs.Rs.LRange(sm.getRedisKey(), 0, -1)
+func (rMsg *RedisMessage) GetMessage() (bs []byte,len int64, err error)  {
+    sm := rMsg.getMessage()
+    cmd := rMsg.Rs.LRange(sm.getRedisKey(), 0, -1)
 
     if err := cmd.Err();  err != nil {
         logger.Log.Println("read message error"+err.Error())
@@ -46,7 +46,7 @@ func (rs *RedisMessage) GetMessage() (bs []byte,len int64, err error)  {
     return bs,len,err
 }
 
-func (rs *RedisMessage) getMessage() StockMessage {
+func (rMsg *RedisMessage) getMessage() StockMessage {
     return StockMessage{
         Time:time.Now().Unix(),
     }

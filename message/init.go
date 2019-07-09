@@ -7,8 +7,7 @@ import (
 )
 
 
-
-var rs *RedisMessage
+var RMessage *RedisMessage
 
 //数据落地
 func init() {
@@ -16,7 +15,7 @@ func init() {
     if err != nil {
         db = 0
     }
-    rs.Rs = redis.NewClient(&redis.Options{
+    RMessage.Rs = redis.NewClient(&redis.Options{
         Addr:    config.Cf.Redis.Host,
         Password: config.Cf.Redis.Pw, // no password set
         DB:      db,  // use default DB
