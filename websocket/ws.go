@@ -7,6 +7,7 @@ import (
     "sync"
     "github.com/lwl1989/ws/message"
     "time"
+    "fmt"
 )
 
 type WsConn struct {
@@ -27,7 +28,7 @@ type WsProtocol struct {
     //use rw mutex
     rwm *sync.RWMutex
 
-    msg chan <- []byte
+    Msg chan []byte
 }
 
 
@@ -47,13 +48,41 @@ func GetMessage() {
         select {
         // 如果时间通道数据读取成功,
         case <-timer.C:
-            ws.getMessage()
+            fmt.Println("one")
+            go Wsp.Send()
+        }
+    }
+}
+func (w *WsProtocol) Send() {
+    go Wsp.getMessage()
+    //cs := w.All()
+    for {
+        select {
+            case rMsg := <-w.Msg:
+                go w.send(rMsg)
+            default:
+                //fmt.Println(3)
         }
     }
 }
 
+func (w *WsProtocol) send(b []byte) {
+    all := w.All()
+    for _,v := range all{
+        v.send(b)
+    }
+}
+
+func (wsc *WsConn) send(b []byte) {
+    err := wsc.WriteMessage(websocket.BinaryMessage, b)
+    if err != nil{
+        logger.Log.Println("send message error message:"+ err.Error())
+    }
+}
 
 func (w *WsProtocol) getMessage() {
+    w.Msg <- []byte("hello")
+    return
     bs,l,err := message.RMessage.GetMessage()
     if err != nil {
         logger.Log.Println("get message error:", err)
@@ -65,7 +94,7 @@ func (w *WsProtocol) getMessage() {
         return
     }
 
-    w.msg <- bs
+    w.Msg <- bs
 }
 
 func Handler(w http.ResponseWriter, r *http.Request)  {
@@ -75,14 +104,14 @@ func Handler(w http.ResponseWriter, r *http.Request)  {
         //todo:
     }
 
-    con, err := ws.Upgrade(w, r, nil)
+    con, err := Wsp.Upgrade(w, r, nil)
 
     var wsConn  = &WsConn {
         UniqueKey:uniqueKey,
         Conn:con,
     }
 
-    ws.Online(wsConn)
+    Wsp.Online(wsConn)
     if err != nil {
         logger.Log.Println("handler err with message" + err.Error())
         panic("handler err with message" + err.Error())
@@ -99,7 +128,7 @@ func Handler(w http.ResponseWriter, r *http.Request)  {
             content := string(p)
             if content == "bye" {
                 logger.Log.Println("conn offline" +wsConn.GetUniqueKey())
-                ws.OffLine(wsConn)
+                Wsp.OffLine(wsConn)
                 return
             }
         }

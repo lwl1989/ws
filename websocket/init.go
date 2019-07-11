@@ -2,18 +2,20 @@ package websocket
 
 import (
     "net/http"
+    "sync"
 )
-var ws *WsProtocol
+var Wsp *WsProtocol
 
 func init()  {
-    ws = &WsProtocol{
+    Wsp = &WsProtocol{
 
     }
-    ws.ReadBufferSize = 1024
-    ws.WriteBufferSize = 1024
-    ws.CheckOrigin = func(r *http.Request) bool {
+    Wsp.ReadBufferSize = 1024
+    Wsp.WriteBufferSize = 1024
+    Wsp.CheckOrigin = func(r *http.Request) bool {
         //todo: check origin is allowed
         return true
     }
-
+    Wsp.rwm = &sync.RWMutex{}
+    Wsp.Msg = make(chan []byte)
 }
