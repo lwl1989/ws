@@ -3,19 +3,26 @@ package websocket
 import (
     "net/http"
     "sync"
+    "github.com/gorilla/websocket"
 )
 var Wsp *WsProtocol
+var Up   *websocket.Upgrader
+
 
 func init()  {
     Wsp = &WsProtocol{
 
     }
-    Wsp.ReadBufferSize = 1024
-    Wsp.WriteBufferSize = 1024
-    Wsp.CheckOrigin = func(r *http.Request) bool {
+    Up = &websocket.Upgrader{
+
+    }
+    Up.ReadBufferSize = 1024
+    Up.WriteBufferSize = 1024
+    Up.CheckOrigin = func(r *http.Request) bool {
         //todo: check origin is allowed
         return true
     }
+    Wsp.Connections = make(map[string]*WsConn)
     Wsp.rwm = &sync.RWMutex{}
     Wsp.Msg = make(chan []byte)
 }

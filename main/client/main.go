@@ -9,7 +9,8 @@ import (
 
     "github.com/gorilla/websocket"
     "net/http"
-    "github.com/google/uuid"
+    "time"
+    "math/rand"
 )
 var addr = flag.String("addr", "localhost:8080", "http service address")
 
@@ -33,7 +34,7 @@ func main()  {
 
     for i := 0; i < 10000 ; i++ {
         header := http.Header{}
-        header.Set("Sec-WebSocket-Key", uuid.New().String())
+       // header.Set("Sec-WebSocket-Key", GetRandomString(16))
         c, _, err := websocket.DefaultDialer.Dial(u.String(), header)
         if err != nil {
             log.Fatal("dial:", err)
@@ -65,3 +66,15 @@ func main()  {
 
 
 }
+
+func  GetRandomString(l int) string {
+    str := "0123456789abcdefghijklmnopqrstuvwxyz"
+    bytes := []byte(str)
+    result := []byte{}
+    r := rand.New(rand.NewSource(time.Now().UnixNano()))
+    for i := 0; i < l; i++ {
+        result = append(result, bytes[r.Intn(len(bytes))])
+    }
+    return string(result)
+}
+

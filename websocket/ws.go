@@ -20,7 +20,6 @@ func (wsc *WsConn) GetUniqueKey() string {
 }
 
 type WsProtocol struct {
-    websocket.Upgrader
 
     //all connections, It's mapping O(1)
     Connections map[string]*WsConn
@@ -104,7 +103,7 @@ func Handler(w http.ResponseWriter, r *http.Request)  {
         //todo:
     }
 
-    con, err := Wsp.Upgrade(w, r, nil)
+    con, err := Up.Upgrade(w, r, nil)
 
     var wsConn  = &WsConn {
         UniqueKey:uniqueKey,
