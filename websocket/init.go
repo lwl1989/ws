@@ -25,4 +25,7 @@ func init()  {
     Wsp.Connections = make(map[string]*WsConn)
     Wsp.rwm = &sync.RWMutex{}
     Wsp.Msg = make(chan []byte)
+    Wsp.register = make(chan *WsConn)
+    Wsp.unRegister = make(chan *WsConn)
+    go Wsp.Run()
 }

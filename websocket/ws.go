@@ -1,7 +1,6 @@
 package websocket
 
 import (
-    "github.com/gorilla/websocket"
     "net/http"
     "github.com/lwl1989/ws/logger"
     "sync"
@@ -10,16 +9,12 @@ import (
     "fmt"
 )
 
-type WsConn struct {
-    *websocket.Conn
-    UniqueKey string
-}
-
-func (wsc *WsConn) GetUniqueKey() string {
-    return wsc.UniqueKey
-}
-
 type WsProtocol struct {
+    // Register requests from the clients.
+    register chan *WsConn
+
+    // UnRegister requests from clients.
+    unRegister chan *WsConn
 
     //all connections, It's mapping O(1)
     Connections map[string]*WsConn
@@ -28,12 +23,37 @@ type WsProtocol struct {
     rwm *sync.RWMutex
 
     Msg chan []byte
+
+    num int //count
 }
 
+func Handler(w http.ResponseWriter, r *http.Request)  {
+
+    uniqueKey := r.Header.Get("Sec-WebSocket-Key")
+    if uniqueKey == "" {
+        //todo:
+    }
+
+    con, err := Up.Upgrade(w, r, nil)
+    if err != nil {
+        logger.Log.Println("handler err with message" + err.Error())
+        panic("handler err with message" + err.Error())
+    }
+
+    var wsConn  = &WsConn {
+        UniqueKey:uniqueKey,
+        Conn:con,
+        send: make(chan []byte, 256),
+    }
+
+    Wsp.Online(wsConn)
+    //go wsConn.read()
+    go wsConn.write()
+}
 
 //one second read one message
 func GetMessage() {
-    timer := time.NewTicker(1 * time.Second)
+    timer := time.NewTicker(3 * time.Second)
     defer func() {
         // 如果程序异常, 停止当前定时任务,记录日志,重启任务
         if x := recover(); x != nil {
@@ -52,15 +72,16 @@ func GetMessage() {
         }
     }
 }
+
 func (w *WsProtocol) Send() {
     go Wsp.getMessage()
     //cs := w.All()
     for {
         select {
-            case rMsg := <-w.Msg:
-                go w.send(rMsg)
-            default:
-                //fmt.Println(3)
+        case rMsg := <-w.Msg:
+            go w.send(rMsg)
+        default:
+            //fmt.Println(3)
         }
     }
 }
@@ -68,14 +89,7 @@ func (w *WsProtocol) Send() {
 func (w *WsProtocol) send(b []byte) {
     all := w.All()
     for _,v := range all{
-        v.send(b)
-    }
-}
-
-func (wsc *WsConn) send(b []byte) {
-    err := wsc.WriteMessage(websocket.BinaryMessage, b)
-    if err != nil{
-        logger.Log.Println("send message error message:"+ err.Error())
+        v.Send(b)
     }
 }
 
@@ -96,48 +110,12 @@ func (w *WsProtocol) getMessage() {
     w.Msg <- bs
 }
 
-func Handler(w http.ResponseWriter, r *http.Request)  {
-
-    uniqueKey := r.Header.Get("Sec-WebSocket-Key")
-    if uniqueKey == "" {
-        //todo:
-    }
-
-    con, err := Up.Upgrade(w, r, nil)
-    if err != nil {
-        logger.Log.Println("handler err with message" + err.Error())
-        panic("handler err with message" + err.Error())
-    }
-    var wsConn  = &WsConn {
-        UniqueKey:uniqueKey,
-        Conn:con,
-    }
-    defer con.Close()
-
-    Wsp.Online(wsConn)
-    for {
-        messageType, p, err := wsConn.ReadMessage()
-        if err != nil {
-            logger.Log.Println("read message error" +err.Error())
-            return
-        }
-
-        if messageType == websocket.TextMessage {
-            content := string(p)
-            if content == "bye" {
-                logger.Log.Println("conn offline" +wsConn.GetUniqueKey())
-                Wsp.OffLine(wsConn)
-                return
-            }
-        }
-    }
+func (w *WsProtocol) getMessageClient(msg []byte) {
+    w.Msg <- msg
 }
-
 //conn connection,write lock
 func (w *WsProtocol) Online(conn *WsConn) {
-    w.rwm.Lock()
-    w.Connections[conn.GetUniqueKey()] = conn
-    w.rwm.Unlock()
+    w.register <- conn
 }
 
 //read lock
@@ -149,8 +127,20 @@ func (w *WsProtocol) All() map[string]*WsConn {
 
 //write lock
 func (w *WsProtocol) OffLine(conn *WsConn) {
-    w.rwm.Lock()
-    defer w.rwm.Unlock()
+    w.unRegister <- conn
+}
 
-    delete(w.Connections, conn.GetUniqueKey())
+func (w *WsProtocol) Run()  {
+    for {
+        select {
+        case client := <-w.register:
+            w.num = w.num +1
+            w.Connections[client.GetUniqueKey()] = client
+        case client := <-w.unRegister:
+            w.num = w.num - 1
+            delete(w.Connections, client.GetUniqueKey())
+        case msg := <-w.Msg:
+            w.send(msg)
+        }
+    }
 }
