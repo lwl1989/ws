@@ -104,18 +104,17 @@ func Handler(w http.ResponseWriter, r *http.Request)  {
     }
 
     con, err := Up.Upgrade(w, r, nil)
-
-    var wsConn  = &WsConn {
-        UniqueKey:uniqueKey,
-        Conn:con,
-    }
-
-    Wsp.Online(wsConn)
     if err != nil {
         logger.Log.Println("handler err with message" + err.Error())
         panic("handler err with message" + err.Error())
     }
+    var wsConn  = &WsConn {
+        UniqueKey:uniqueKey,
+        Conn:con,
+    }
+    defer con.Close()
 
+    Wsp.Online(wsConn)
     for {
         messageType, p, err := wsConn.ReadMessage()
         if err != nil {
@@ -154,5 +153,4 @@ func (w *WsProtocol) OffLine(conn *WsConn) {
     defer w.rwm.Unlock()
 
     delete(w.Connections, conn.GetUniqueKey())
-    conn.Close()
 }
