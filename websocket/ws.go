@@ -74,7 +74,7 @@ func GetMessage() {
 }
 
 func (w *WsProtocol) Send() {
-    go Wsp.getMessage()
+    Wsp.getMessage()
     //cs := w.All()
     for {
         select {
