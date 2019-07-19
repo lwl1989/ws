@@ -68,20 +68,7 @@ func GetMessage() {
         // 如果时间通道数据读取成功,
         case <-timer.C:
             fmt.Println("one")
-            go Wsp.Send()
-        }
-    }
-}
-
-func (w *WsProtocol) Send() {
-    Wsp.getMessage()
-    //cs := w.All()
-    for {
-        select {
-        case rMsg := <-w.Msg:
-            go w.send(rMsg)
-        default:
-            //fmt.Println(3)
+            go Wsp.getMessage()
         }
     }
 }

@@ -16,14 +16,8 @@ func (wsc *WsConn) GetUniqueKey() string {
     return wsc.UniqueKey
 }
 
-
-
 func (wsc *WsConn) Send(b []byte) {
     wsc.send <- b
-    //err := wsc.WriteMessage(websocket.BinaryMessage, b)
-    //if err != nil{
-    //    logger.Log.Println("send message error message:"+ err.Error())
-    //}
 }
 
 
@@ -72,11 +66,11 @@ func (wsc *WsConn) write() {
             w.Write(message)
 
             // Add queued chat messages to the current websocket message.
-            n := len(wsc.send)
-            for i := 0; i < n; i++ {
-                w.Write(newline)
-                w.Write(<-wsc.send)
-            }
+            //n := len(wsc.send)
+            //for i := 0; i < n; i++ {
+            //    w.Write(newline)
+            //    w.Write(<-wsc.send)
+            //}
 
             if err := w.Close(); err != nil {
                 return
