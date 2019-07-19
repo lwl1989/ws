@@ -41,6 +41,11 @@ func (wsc *WsConn) read() {
     //}
 }
 
+//close and offline
+func (wsc *WsConn) Close() {
+    Wsp.OffLine(wsc)
+    wsc.Conn.Close()
+}
 
 func (wsc *WsConn) write() {
     ticker := time.NewTicker(pingPeriod)
