@@ -3,6 +3,9 @@ package websocket
 import (
     "time"
     "github.com/gorilla/websocket"
+    "bytes"
+    "github.com/lwl1989/ws/logger"
+    "fmt"
 )
 
 
@@ -21,24 +24,26 @@ func (wsc *WsConn) Send(b []byte) {
 }
 
 
+//read
 func (wsc *WsConn) read() {
-    //defer func() {
-    //    Wsp.OffLine(wsc)
-    //}()
-    //wsc.SetReadLimit(maxMessageSize)
-    //wsc.SetReadDeadline(time.Now().Add(pongWait))
-    //wsc.SetPongHandler(func(string) error { wsc.SetReadDeadline(time.Now().Add(pongWait)); return nil })
-    //for {
-    //    _, message, err := wsc.ReadMessage()
-    //    if err != nil {
-    //        if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-    //            logger.Log.Println(fmt.Sprintf("error: %v", err))
-    //        }
-    //        break
-    //    }
-    //    message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-    //    Wsp.getMessageClient(message)
-    //}
+    defer func() {
+        Wsp.OffLine(wsc)
+    }()
+    wsc.SetReadLimit(maxMessageSize)
+    wsc.SetReadDeadline(time.Now().Add(pongWait))
+    wsc.SetPongHandler(func(string) error { wsc.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+    for {
+        _, message, err := wsc.ReadMessage()
+        if err != nil {
+            if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+                logger.Log.Println(fmt.Sprintf("error: %v", err))
+            }
+            break
+        }
+        message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+        logger.Log.Println(fmt.Sprintf("error: %v", err))
+        //Wsp.getMessageClient(message)
+    }
 }
 
 //close and offline
