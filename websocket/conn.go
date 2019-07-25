@@ -69,20 +69,8 @@ func (wsc *WsConn) write() {
                 return
             }
 
-            w, err := wsc.NextWriter(websocket.TextMessage)
+            err := wsc.WriteBytes(message)
             if err != nil {
-                return
-            }
-            w.Write(message)
-
-            // Add queued chat messages to the current websocket message.
-            //n := len(wsc.send)
-            //for i := 0; i < n; i++ {
-            //    w.Write(newline)
-            //    w.Write(<-wsc.send)
-            //}
-
-            if err := w.Close(); err != nil {
                 return
             }
             //心跳
@@ -93,4 +81,28 @@ func (wsc *WsConn) write() {
             }
         }
     }
+}
+
+func (wsc *WsConn) WriteString(message string) {
+    wsc.WriteBytes([]byte(message))
+}
+
+func (wsc *WsConn) WriteBytes(message []byte) error {
+    wsc.SetWriteDeadline(time.Now().Add(writeWait))
+
+    w, err := wsc.NextWriter(websocket.TextMessage)
+    if err != nil {
+        return err
+    }
+
+    _,err = w.Write(message)
+    if err != nil {
+        return err
+    }
+
+    if err := w.Close(); err != nil {
+        return err
+    }
+
+    return nil
 }
