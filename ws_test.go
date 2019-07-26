@@ -3,6 +3,7 @@ package ws
 import (
     "testing"
     "fmt"
+    "github.com/prometheus/common/log"
 )
 
 
@@ -10,6 +11,7 @@ type tMessage struct {
     Msg chan []byte
 }
 func TestGetMessage(t *testing.T) {
+    log.Fatal()
     fmt.Println("sss")
     w := &tMessage{
         Msg:make(chan []byte),
