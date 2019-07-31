@@ -27,7 +27,7 @@ func (wsc *WsConn) Send(b []byte) {
 //read
 func (wsc *WsConn) read() {
     defer func() {
-        Wsp.OffLine(wsc)
+        wsc.Close()
     }()
     wsc.SetReadLimit(maxMessageSize)
     wsc.SetReadDeadline(time.Now().Add(pongWait))
@@ -52,8 +52,8 @@ func (wsc *WsConn) read() {
                 //todo:预留
             case websocket.BinaryMessage:
                 //todo:预留
-            default:
-                //todo:忽略
+            //default:
+                //todo:忽略,select 移除default减少性能损失
         }
     }
 }
@@ -62,6 +62,7 @@ func (wsc *WsConn) read() {
 func (wsc *WsConn) Close() {
     Wsp.OffLine(wsc)
     wsc.Conn.Close()
+    close(wsc.send)
 }
 
 func (wsc *WsConn) write() {

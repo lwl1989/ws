@@ -18,6 +18,7 @@ type WsProtocol struct {
 
     //all connections, It's mapping O(1)
     Connections map[string]*WsConn
+    //todo: next splice connections
 
     //use rw mutex
     rwm *sync.RWMutex
@@ -47,7 +48,8 @@ func Handler(w http.ResponseWriter, r *http.Request)  {
     }
 
     Wsp.Online(wsConn)
-    //go wsConn.read()
+
+    go wsConn.read()
     go wsConn.write()
 }
 
@@ -67,7 +69,12 @@ func GetMessage() {
         select {
         // 如果时间通道数据读取成功,
         case <-timer.C:
-            fmt.Println("one")
+            fmt.Println("now connections num is:",Wsp.num)
+            if Wsp.num < 3000 {
+                for k,v := range Wsp.All() {
+                    fmt.Println(k,v)
+                }
+            }
             go Wsp.getMessage()
         }
     }

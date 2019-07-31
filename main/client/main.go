@@ -26,7 +26,7 @@ func main()  {
     interrupt := make(chan os.Signal, 1)
     signal.Notify(interrupt, os.Interrupt)
 
-    u := url.URL{Scheme: "ws", Host: *addr, Path: "/"}
+    u := url.URL{Scheme: "ws", Host: *addr, Path: "/ws"}
     log.Printf("connecting to %s", u.String())
 
     cons := make(map[string]*connection)
@@ -56,14 +56,14 @@ func main()  {
         }
     }
 
-    for _,v := range cons {
-        v.cs.WriteMessage(websocket.TextMessage,[]byte("bye"))
-        v.cs.Close()
-    }
+    //for _,v := range cons {
+    //    v.cs.WriteMessage(websocket.TextMessage,[]byte("bye"))
+    //    v.cs.Close()
+    //}
     //defer c.Close()
 
-    //done := make(chan struct{})
-
+    done := make(chan struct{})
+    <- done
 
 }
 
