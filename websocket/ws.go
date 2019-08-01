@@ -28,6 +28,8 @@ type WsProtocol struct {
     num int //count
 }
 
+var m sync.Map
+
 func Handler(w http.ResponseWriter, r *http.Request)  {
 
     uniqueKey := r.Header.Get("Sec-WebSocket-Key")

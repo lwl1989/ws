@@ -13,6 +13,7 @@ type WsConn struct {
     *websocket.Conn
     UniqueKey string
     send chan []byte
+    close bool
 }
 
 func (wsc *WsConn) GetUniqueKey() string {
@@ -60,9 +61,13 @@ func (wsc *WsConn) read() {
 
 //close and offline
 func (wsc *WsConn) Close() {
-    Wsp.OffLine(wsc)
-    wsc.Conn.Close()
-    close(wsc.send)
+    //panic: close of closed channel
+    if !wsc.close {
+        wsc.close = true
+        Wsp.OffLine(wsc)
+        wsc.Conn.Close()
+        close(wsc.send)
+    }
 }
 
 func (wsc *WsConn) write() {
