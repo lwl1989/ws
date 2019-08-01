@@ -9,6 +9,7 @@ import (
     "fmt"
 )
 
+
 type WsProtocol struct {
     // Register requests from the clients.
     register chan *WsConn
@@ -18,6 +19,7 @@ type WsProtocol struct {
 
     //all connections, It's mapping O(1)
     Connections map[string]*WsConn
+    //todo: map change to sync.Map
     //todo: next splice connections
 
     //use rw mutex
