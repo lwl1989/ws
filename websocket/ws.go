@@ -18,12 +18,13 @@ type WsProtocol struct {
     unRegister chan *WsConn
 
     //all connections, It's mapping O(1)
-    Connections map[string]*WsConn
+    //Connections map[string]*WsConn
     //todo: map change to sync.Map
     //todo: next splice connections
+    ConnectionsMap *sync.Map
 
     //use rw mutex
-    rwm *sync.RWMutex
+    //rwm *sync.RWMutex
 
     Msg chan []byte
 
@@ -118,9 +119,15 @@ func (w *WsProtocol) Online(conn *WsConn) {
 
 //read lock
 func (w *WsProtocol) All() map[string]*WsConn {
-    w.rwm.RLock()
-    defer w.rwm.RUnlock()
-    return w.Connections
+    seen := make(map[string]*WsConn, w.num)
+
+    m.Range(func(ki, vi interface{}) bool {
+        k, v := ki.(string), vi.(*WsConn)
+        seen[k] = v
+        return true
+    })
+
+    return seen
 }
 
 //write lock
@@ -133,10 +140,12 @@ func (w *WsProtocol) Run()  {
         select {
         case client := <-w.register:
             w.num = w.num +1
-            w.Connections[client.GetUniqueKey()] = client
+            w.ConnectionsMap.Store(client.GetUniqueKey(), client)
+            //w.Connections[client.GetUniqueKey()] = client
         case client := <-w.unRegister:
             w.num = w.num - 1
-            delete(w.Connections, client.GetUniqueKey())
+            w.ConnectionsMap.Delete(client.GetUniqueKey())
+            //delete(w.Connections, client.GetUniqueKey())
         case msg := <-w.Msg:
             w.send(msg)
         }
