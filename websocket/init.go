@@ -23,7 +23,8 @@ func init()  {
         return true
     }
     //Wsp.Connections = make(map[string]*WsConn)
-    Wsp.ConnectionsMap = new(sync.Map)
+    Wsp.ConnectionsMap = make(map[string]*sync.Map)
+        //new(sync.Map)
     //Wsp.rwm = new(sync.RWMutex)
     Wsp.Msg = make(chan []byte)
     Wsp.register = make(chan *WsConn)

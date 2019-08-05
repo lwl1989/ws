@@ -13,11 +13,20 @@ type WsConn struct {
     *websocket.Conn
     UniqueKey string
     send chan []byte
+    room string
     close bool
 }
 
 func (wsc *WsConn) GetUniqueKey() string {
     return wsc.UniqueKey
+}
+
+func (wsc *WsConn) GetRoom() string {
+    return wsc.room
+}
+
+func (wsc *WsConn) SetRoom(room string)  {
+    wsc.room = room
 }
 
 func (wsc *WsConn) Send(b []byte) {

@@ -4,9 +4,10 @@ import (
     "net/http"
     "github.com/lwl1989/ws/logger"
     "sync"
-    "github.com/lwl1989/ws/message"
+    //"github.com/lwl1989/ws/message"
     "time"
     "fmt"
+    "strings"
 )
 
 
@@ -21,26 +22,71 @@ type WsProtocol struct {
     //Connections map[string]*WsConn
     //todo: map change to sync.Map
     //todo: next splice connections
-    ConnectionsMap *sync.Map
+    ConnectionsMap  map[string]*sync.Map
 
     //use rw mutex
-    //rwm *sync.RWMutex
+    rwm *sync.RWMutex
 
-    Msg chan []byte
-
+    Msg chan RoomMsg
     num int //count
 }
 
 var m sync.Map
 
-func Handler(w http.ResponseWriter, r *http.Request)  {
+func (w *WsProtocol) ServeHTTP(rw http.ResponseWriter, r *http.Request)  {
+
+    res := strings.Split(r.URL.Path, "/")
+    l := len(res)
+    if l < 2 || res[0] != "ws" {
+        rw.WriteHeader(200)
+        rw.Write([]byte("{}"))
+        return
+    }
+
+    room := ""
+    if len(res) == 2 {
+        room = res[1]
+    }
+
+    if room == "" {
+        rw.WriteHeader(200)
+        rw.Write([]byte("{}"))
+        return
+    }
+
+    if res[0] == "ws" {
+        w.registerWs(rw, r, room)
+    }
+
+    if res[0] == "room" {
+        w.registerRoom(rw, r, room)
+    }
+
+    rw.WriteHeader(200)
+    rw.Write([]byte("{}"))
+    return
+}
+
+//lock room
+func (w *WsProtocol)  registerRoom(rw http.ResponseWriter, r *http.Request, room string) {
+    w.rwm.Lock()
+    defer func() {
+        w.rwm.Unlock()
+    }()
+
+    if _,ok := w.ConnectionsMap[room]; !ok {
+        w.ConnectionsMap[room] = new(sync.Map)
+    }
+}
+
+func (w *WsProtocol)  registerWs(rw http.ResponseWriter, r *http.Request, room string)  {
 
     uniqueKey := r.Header.Get("Sec-WebSocket-Key")
     if uniqueKey == "" {
         //todo:
     }
 
-    con, err := Up.Upgrade(w, r, nil)
+    con, err := Up.Upgrade(rw, r, nil)
     if err != nil {
         logger.Log.Println("handler err with message" + err.Error())
         panic("handler err with message" + err.Error())
@@ -50,6 +96,7 @@ func Handler(w http.ResponseWriter, r *http.Request)  {
         UniqueKey:uniqueKey,
         Conn:con,
         send: make(chan []byte, 256),
+        room:room,
     }
 
     Wsp.Online(wsConn)
@@ -75,50 +122,48 @@ func GetMessage() {
         // 如果时间通道数据读取成功,
         case <-timer.C:
             fmt.Println("now connections num is:",Wsp.num)
-            if Wsp.num < 3000 {
-                for k,v := range Wsp.All() {
-                    fmt.Println(k,v)
-                }
-            }
             go Wsp.getMessage()
         }
     }
 }
 
-func (w *WsProtocol) send(b []byte) {
-    all := w.All()
+func (w *WsProtocol) send(msg RoomMsg) {
+    all := w.All(msg.GetRoom())
     for _,v := range all{
-        v.Send(b)
+        v.Send(msg.GetMsg())
     }
 }
 
 func (w *WsProtocol) getMessage() {
-    w.Msg <- []byte("hello")
+    w.Msg <- RoomMsg{
+        msg:[]byte("hello"),
+        room:"test",
+    }
     return
-    bs,l,err := message.RMessage.GetMessage()
-    if err != nil {
-        logger.Log.Println("get message error:", err)
-        return
-    }
-
-    if l == 0 {
-        logger.Log.Println(time.Now().Unix(), "get content is null")
-        return
-    }
-
-    w.Msg <- bs
+    //bs,l,err := message.RMessage.GetMessage()
+    //if err != nil {
+    //    logger.Log.Println("get message error:", err)
+    //    return
+    //}
+    //
+    //if l == 0 {
+    //    logger.Log.Println(time.Now().Unix(), "get content is null")
+    //    return
+    //}
+    //
+    //w.Msg <- bs
 }
 
-func (w *WsProtocol) getMessageClient(msg []byte) {
-    w.Msg <- msg
-}
+//func (w *WsProtocol) getMessageClient(msg []byte) {
+//    w.Msg <- msg
+//}
 //conn connection,write lock
 func (w *WsProtocol) Online(conn *WsConn) {
     w.register <- conn
 }
 
 //read lock
-func (w *WsProtocol) All() map[string]*WsConn {
+func (w *WsProtocol) All(room string) map[string]*WsConn {
     seen := make(map[string]*WsConn, w.num)
 
     m.Range(func(ki, vi interface{}) bool {
@@ -139,12 +184,14 @@ func (w *WsProtocol) Run()  {
     for {
         select {
         case client := <-w.register:
-            w.num = w.num +1
-            w.ConnectionsMap.Store(client.GetUniqueKey(), client)
+            room := client.GetRoom()
+            w.num = w.num + 1
+            w.ConnectionsMap[room].Store(client.GetUniqueKey(), client)
             //w.Connections[client.GetUniqueKey()] = client
         case client := <-w.unRegister:
             w.num = w.num - 1
-            w.ConnectionsMap.Delete(client.GetUniqueKey())
+            room := client.GetRoom()
+            w.ConnectionsMap[room].Delete(client.GetUniqueKey())
             //delete(w.Connections, client.GetUniqueKey())
         case msg := <-w.Msg:
             w.send(msg)

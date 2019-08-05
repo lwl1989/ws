@@ -14,10 +14,10 @@ func main()  {
     runtime.GOMAXPROCS(runtime.NumCPU())
     flag.Parse()
     log.SetFlags(0)
-    http.HandleFunc("/ws", websocket.Handler)
+    //http.HandleFunc("/ws", websocket.Handler)
     go websocket.GetMessage()
     go func() {
         log.Println(http.ListenAndServe("localhost:10000", nil))
     }()
-    log.Fatal(http.ListenAndServe(*addr, nil))
+    log.Fatal(http.ListenAndServe(*addr, websocket.Wsp))
 }
