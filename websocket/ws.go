@@ -56,10 +56,12 @@ func (w *WsProtocol) ServeHTTP(rw http.ResponseWriter, r *http.Request)  {
 
     if res[0] == "ws" {
         w.registerWs(rw, r, room)
+        return
     }
 
     if res[0] == "room" {
         w.registerRoom(rw, r, room)
+        return
     }
 
     rw.WriteHeader(200)

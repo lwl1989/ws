@@ -26,12 +26,13 @@ func main()  {
     interrupt := make(chan os.Signal, 1)
     signal.Notify(interrupt, os.Interrupt)
 
-    u := url.URL{Scheme: "ws", Host: *addr, Path: "/ws"}
+    u := url.URL{Scheme: "ws", Host: *addr, Path: "/ws/test"}
     log.Printf("connecting to %s", u.String())
-
+    u1 := url.URL{Scheme: "http", Host: *addr, Path: "/room/test"}
     cons := make(map[string]*connection)
 
-
+    http.Get(u1.String())
+    
     for i := 0; i < 10000 ; i++ {
         header := http.Header{}
        // header.Set("Sec-WebSocket-Key", GetRandomString(16))
