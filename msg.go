@@ -1,6 +1,6 @@
-package websocket
+package ws
 
-
+//default IMessage
 type RoomMsg struct {
     msg  []byte
     room string
@@ -20,5 +20,9 @@ func (rm *RoomMsg) GetMsg() []byte {
 
 func (rm *RoomMsg) GetRoom() string {
     return rm.room
+}
+
+func (rm *RoomMsg)  GetMessage() (bs []byte,length int64, err error) {
+    return rm.msg, int64(len(rm.msg)), nil
 }
 

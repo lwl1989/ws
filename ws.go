@@ -1,39 +1,36 @@
-package websocket
+package ws
 
 import (
     "net/http"
-    "github.com/lwl1989/ws/logger"
+    "github.com/lwl1989/logger"
     "sync"
     //"github.com/lwl1989/ws/message"
-    "time"
-    "fmt"
     "strings"
 )
 
 
-type WsProtocol struct {
+type Protocol struct {
     // Register requests from the clients.
-    register chan *WsConn
+    register chan *Connection
 
     // UnRegister requests from clients.
-    unRegister chan *WsConn
+    unRegister chan *Connection
 
     //all connections, It's mapping O(1)
-    //Connections map[string]*WsConn
-    //todo: map change to sync.Map
-    //todo: next splice connections
+    //Connections map[string]*Connection
     ConnectionsMap  map[string]*sync.Map
 
     //use rw mutex
     rwm *sync.RWMutex
 
-    Msg chan RoomMsg
+    Msg chan IMessage
     num int //count
+    PLog *logger.TTLog
 }
 
 var m sync.Map
 
-func (w *WsProtocol) ServeHTTP(rw http.ResponseWriter, r *http.Request)  {
+func (w *Protocol) ServeHTTP(rw http.ResponseWriter, r *http.Request)  {
 
     res := strings.Split(r.URL.Path, "/")
     l := len(res)
@@ -70,7 +67,7 @@ func (w *WsProtocol) ServeHTTP(rw http.ResponseWriter, r *http.Request)  {
 }
 
 //lock room
-func (w *WsProtocol)  registerRoom(rw http.ResponseWriter, r *http.Request, room string) {
+func (w *Protocol)  registerRoom(rw http.ResponseWriter, r *http.Request, room string) {
     w.rwm.Lock()
     defer func() {
         w.rwm.Unlock()
@@ -81,7 +78,7 @@ func (w *WsProtocol)  registerRoom(rw http.ResponseWriter, r *http.Request, room
     }
 }
 
-func (w *WsProtocol)  registerWs(rw http.ResponseWriter, r *http.Request, room string)  {
+func (w *Protocol)  registerWs(rw http.ResponseWriter, r *http.Request, room string)  {
 
     uniqueKey := r.Header.Get("Sec-WebSocket-Key")
     if uniqueKey == "" {
@@ -90,11 +87,11 @@ func (w *WsProtocol)  registerWs(rw http.ResponseWriter, r *http.Request, room s
 
     con, err := Up.Upgrade(rw, r, nil)
     if err != nil {
-        logger.Log.Println("handler err with message" + err.Error())
+        w.PLog.Println("handler err with message" + err.Error())
         panic("handler err with message" + err.Error())
     }
 
-    var wsConn  = &WsConn {
+    var wsConn  = &Connection {
         UniqueKey:uniqueKey,
         Conn:con,
         send: make(chan []byte, 256),
@@ -107,69 +104,34 @@ func (w *WsProtocol)  registerWs(rw http.ResponseWriter, r *http.Request, room s
     go wsConn.write()
 }
 
-//one second read one message
-func GetMessage() {
-    timer := time.NewTicker(3 * time.Second)
-    defer func() {
-        // 如果程序异常, 停止当前定时任务,记录日志,重启任务
-        if x := recover(); x != nil {
-            timer.Stop()
-            logger.Log.Println("update cache panic:UpdateCacheTickers panic :", x)
-            go GetMessage()
-        }
-    }()
-    for {
-        // 监听IO
-        select {
-        // 如果时间通道数据读取成功,
-        case <-timer.C:
-            fmt.Println("now connections num is:",Wsp.num)
-            go Wsp.getMessage()
-        }
-    }
-}
-
-func (w *WsProtocol) send(msg RoomMsg) {
+func (w *Protocol) send(msg IMessage) {
     all := w.All(msg.GetRoom())
+    bs,length,err := msg.GetMessage()
+
+    if err != nil {
+        w.PLog.Println(err)
+        return
+    }
+    if length < 1 || len(bs) == 0 {
+        w.PLog.Println("message is nil")
+        return
+    }
     for _,v := range all{
-        v.Send(msg.GetMsg())
+        v.Send(bs)
     }
 }
 
-func (w *WsProtocol) getMessage() {
-    w.Msg <- RoomMsg{
-        msg:[]byte("hello"),
-        room:"test",
-    }
-    return
-    //bs,l,err := message.RMessage.GetMessage()
-    //if err != nil {
-    //    logger.Log.Println("get message error:", err)
-    //    return
-    //}
-    //
-    //if l == 0 {
-    //    logger.Log.Println(time.Now().Unix(), "get content is null")
-    //    return
-    //}
-    //
-    //w.Msg <- bs
-}
-
-//func (w *WsProtocol) getMessageClient(msg []byte) {
-//    w.Msg <- msg
-//}
 //conn connection,write lock
-func (w *WsProtocol) Online(conn *WsConn) {
+func (w *Protocol) Online(conn *Connection) {
     w.register <- conn
 }
 
 //read lock
-func (w *WsProtocol) All(room string) map[string]*WsConn {
-    seen := make(map[string]*WsConn, w.num)
+func (w *Protocol) All(room string) map[string]*Connection {
+    seen := make(map[string]*Connection, w.num)
 
     m.Range(func(ki, vi interface{}) bool {
-        k, v := ki.(string), vi.(*WsConn)
+        k, v := ki.(string), vi.(*Connection)
         seen[k] = v
         return true
     })
@@ -178,11 +140,11 @@ func (w *WsProtocol) All(room string) map[string]*WsConn {
 }
 
 //write lock
-func (w *WsProtocol) OffLine(conn *WsConn) {
+func (w *Protocol) OffLine(conn *Connection) {
     w.unRegister <- conn
 }
 
-func (w *WsProtocol) Run()  {
+func (w *Protocol) Run()  {
     for {
         select {
         case client := <-w.register:
