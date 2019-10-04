@@ -1,41 +1,41 @@
-package websocket
+package ws
 
 import (
     "time"
     "github.com/gorilla/websocket"
     "bytes"
-    "github.com/lwl1989/ws/logger"
     "fmt"
 )
 
 
-type WsConn struct {
+type Connection struct {
     *websocket.Conn
     UniqueKey string
     send chan []byte
     room string
     close bool
+    CLog ILog
 }
 
-func (wsc *WsConn) GetUniqueKey() string {
+func (wsc *Connection) GetUniqueKey() string {
     return wsc.UniqueKey
 }
 
-func (wsc *WsConn) GetRoom() string {
+func (wsc *Connection) GetRoom() string {
     return wsc.room
 }
 
-func (wsc *WsConn) SetRoom(room string)  {
+func (wsc *Connection) SetRoom(room string)  {
     wsc.room = room
 }
 
-func (wsc *WsConn) Send(b []byte) {
+func (wsc *Connection) Send(b []byte) {
     wsc.send <- b
 }
 
 
 //read
-func (wsc *WsConn) read() {
+func (wsc *Connection) read() {
     defer func() {
         wsc.Close()
     }()
@@ -46,17 +46,17 @@ func (wsc *WsConn) read() {
         msgType, message, err := wsc.ReadMessage()
         if err != nil {
             if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-                logger.Log.Println(fmt.Sprintf("error: %v", err))
+                wsc.CLog.Println(fmt.Sprintf("error: %v", err))
             }
             break
         }
 
         message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-        logger.Log.Println(fmt.Sprintf("receive message: %s", string(message[:])))
+        wsc.CLog.Println(fmt.Sprintf("receive message: %s", string(message[:])))
 
         switch msgType {
             case websocket.CloseMessage:
-                logger.Log.Println("client send close:"+wsc.GetUniqueKey())
+                wsc.CLog.Println("client send close:"+wsc.GetUniqueKey())
                 return
             case websocket.TextMessage:
                 //todo:预留
@@ -69,7 +69,7 @@ func (wsc *WsConn) read() {
 }
 
 //close and offline
-func (wsc *WsConn) Close() {
+func (wsc *Connection) Close() {
     //panic: close of closed channel
     if !wsc.close {
         wsc.close = true
@@ -79,7 +79,7 @@ func (wsc *WsConn) Close() {
     }
 }
 
-func (wsc *WsConn) write() {
+func (wsc *Connection) write() {
     ticker := time.NewTicker(pingPeriod)
     defer func() {
         ticker.Stop()
@@ -110,11 +110,11 @@ func (wsc *WsConn) write() {
     }
 }
 
-func (wsc *WsConn) WriteString(message string) {
+func (wsc *Connection) WriteString(message string) {
     wsc.WriteBytes([]byte(message))
 }
 
-func (wsc *WsConn) WriteBytes(message []byte) error {
+func (wsc *Connection) WriteBytes(message []byte) error {
     wsc.SetWriteDeadline(time.Now().Add(writeWait))
 
     w, err := wsc.NextWriter(websocket.TextMessage)

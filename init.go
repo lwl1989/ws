@@ -1,16 +1,16 @@
-package websocket
+package ws
 
 import (
     "net/http"
     "sync"
     "github.com/gorilla/websocket"
 )
-var Wsp *WsProtocol
+var Wsp *Protocol
 var Up   *websocket.Upgrader
 
 
 func init()  {
-    Wsp = &WsProtocol{
+    Wsp = &Protocol{
 
     }
     Up = &websocket.Upgrader{
@@ -22,12 +22,12 @@ func init()  {
         //todo: check origin is allowed
         return true
     }
-    //Wsp.Connections = make(map[string]*WsConn)
+    //Wsp.Connections = make(map[string]*Connection)
     Wsp.ConnectionsMap = make(map[string]*sync.Map)
         //new(sync.Map)
     //Wsp.rwm = new(sync.RWMutex)
-    Wsp.Msg = make(chan []byte)
-    Wsp.register = make(chan *WsConn)
-    Wsp.unRegister = make(chan *WsConn)
+    Wsp.Msg = make(chan IMessage)
+    Wsp.register = make(chan *Connection)
+    Wsp.unRegister = make(chan *Connection)
     go Wsp.Run()
 }
