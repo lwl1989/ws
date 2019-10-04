@@ -2,7 +2,6 @@ package ws
 
 import (
     "net/http"
-    "github.com/lwl1989/logger"
     "sync"
     //"github.com/lwl1989/ws/message"
     "strings"
@@ -25,7 +24,7 @@ type Protocol struct {
 
     Msg chan IMessage
     num int //count
-    PLog *logger.TTLog
+    PLog ILog
 }
 
 var m sync.Map

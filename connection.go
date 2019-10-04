@@ -5,7 +5,6 @@ import (
     "github.com/gorilla/websocket"
     "bytes"
     "fmt"
-    "github.com/lwl1989/logger"
 )
 
 
@@ -15,7 +14,7 @@ type Connection struct {
     send chan []byte
     room string
     close bool
-    CLog *logger.TTLog
+    CLog ILog
 }
 
 func (wsc *Connection) GetUniqueKey() string {
