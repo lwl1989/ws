@@ -1,0 +1,12 @@
+# github.com/go-libraries/ws v0.0.0-20191010035927-5a46a354339e
+github.com/go-libraries/ws
+# github.com/go-redis/redis v6.15.6+incompatible
+github.com/go-redis/redis
+github.com/go-redis/redis/internal
+github.com/go-redis/redis/internal/consistenthash
+github.com/go-redis/redis/internal/hashtag
+github.com/go-redis/redis/internal/pool
+github.com/go-redis/redis/internal/proto
+github.com/go-redis/redis/internal/util
+# github.com/gorilla/websocket v1.4.1
+github.com/gorilla/websocket
