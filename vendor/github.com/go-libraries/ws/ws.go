@@ -42,7 +42,7 @@ type Protocol struct {
 //router http   /room/xxx/register
 func (w *Protocol) ServeHTTP(rw http.ResponseWriter, r *http.Request)  {
 
-    res := strings.Split(strings.TrimLeft(r.URL.Path, "/"), "/")
+    res := strings.Split(r.URL.Path, "/")
     l := len(res)
     if l < 2 {
         Response(rw, DefaultResponse{
@@ -65,7 +65,7 @@ func (w *Protocol) ServeHTTP(rw http.ResponseWriter, r *http.Request)  {
             return
         }
         w.registerWs(rw, r, room)
-        //Response(rw, SuccessResponse)
+        Response(rw, SuccessResponse)
         return
     }
 
