@@ -11,6 +11,7 @@ import (
 var RMessage *RedisMessage
 var Cf *Config
 var Logs  *log.Logger
+var EtcReg *ServiceReg
 
 func init()   {
     Cf = &Config{
@@ -21,6 +22,11 @@ func init()   {
             Host: "127.0.0.1:6379",
             Db:   "1",
             Pw:   "",
+        },
+        Etcd: &EtcdConfig{
+            Addr: []string{"127.0.0.1:2379"},
+            TimeOut: 5,
+            LeaseTime: 3600,
         },
     }
 
@@ -40,5 +46,11 @@ func init()   {
         Password: Cf.Redis.Pw, // no password set
         DB:      db,  // use default DB
     })
+
+    if Cf.Etcd.Enabled {
+        EtcReg,_ = NewServiceReg(Cf.Etcd.Addr, Cf.Etcd.LeaseTime, Cf.Etcd.TimeOut)
+    } else{
+        EtcReg = &ServiceReg{}
+    }
 }
 

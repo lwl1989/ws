@@ -6,8 +6,16 @@ import (
 )
 
 type Config struct {
-    LogConfig *LogFileConfig `json:"log_config"`
-    Redis *Redis `json:"redis"`
+    LogConfig *LogFileConfig `json:"log_config,omitempty"`
+    Redis *Redis `json:"redis,omitempty"`
+    Etcd  *EtcdConfig `json:"etcd,omitempty"`
+}
+
+type EtcdConfig struct {
+    Enabled bool `json:"enabled,omitempty"`
+    Addr []string `json:"addr,omitempty"`
+    TimeOut int64 `json:"time_out,omitempty"`
+    LeaseTime int64 `json:"lease_time,omitempty"`
 }
 
 type LogFileConfig struct {
