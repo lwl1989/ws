@@ -1,56 +1,57 @@
 package component
 
 import (
-    "github.com/go-redis/redis"
-    "fmt"
-    "time"
-    "encoding/json"
+	"encoding/json"
+	"fmt"
+	"github.com/go-redis/redis"
+	"time"
 )
 
 const RedisStockKey = "stock_key_%d"
+
 type Stock interface {
-    GetMessage() (bs []byte,len int64, err error)
+	GetMessage() (bs []byte, len int64, err error)
 }
 
-type StockMessage struct{
-    Time int64 `json:"time"`
-    Contents []string `json:"contents"`
+type StockMessage struct {
+	Time     int64    `json:"time"`
+	Contents []string `json:"contents"`
 }
 
 type RedisMessage struct {
-    Rs *redis.Client
+	Rs *redis.Client
 }
 
 //impl Stock interface with redis
-func (rMsg *RedisMessage) GetMessage() (bs []byte,len int64, err error)  {
-    sm := rMsg.getMessage()
-    cmd := rMsg.Rs.LRange(sm.getRedisKey(), 0, -1)
+func (rMsg *RedisMessage) GetMessage() (bs []byte, len int64, err error) {
+	sm := rMsg.getMessage()
+	cmd := rMsg.Rs.LRange(sm.getRedisKey(), 0, -1)
 
-    if err := cmd.Err();  err != nil {
-        Logs.Println("read message error"+err.Error())
-        return bs,0,err
-    }
+	if err := cmd.Err(); err != nil {
+		Logs.Println("read message error" + err.Error())
+		return bs, 0, err
+	}
 
-    sm.Contents = make([]string, 0)
-    for _,v := range cmd.Val() {
-        sm.Contents = append(sm.Contents, v)
-        len ++
-    }
+	sm.Contents = make([]string, 0)
+	for _, v := range cmd.Val() {
+		sm.Contents = append(sm.Contents, v)
+		len++
+	}
 
-    bs,err = json.Marshal(sm)
-    if err != nil {
-        return bs,0,err
-    }
+	bs, err = json.Marshal(sm)
+	if err != nil {
+		return bs, 0, err
+	}
 
-    return bs,len,err
+	return bs, len, err
 }
 
 func (rMsg *RedisMessage) getMessage() StockMessage {
-    return StockMessage{
-        Time:time.Now().Unix(),
-    }
+	return StockMessage{
+		Time: time.Now().Unix(),
+	}
 }
 
 func (sm StockMessage) getRedisKey() string {
-    return fmt.Sprintf(RedisStockKey, time.Now().Unix())
+	return fmt.Sprintf(RedisStockKey, time.Now().Unix())
 }
